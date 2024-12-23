@@ -51,7 +51,10 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 uint8_t rx_data[3];
-
+#define SERVO_NEUTRAL 75  // 1.5 ms - zatrzymanie
+#define SERVO_CW      50  // 1.3 ms - obrót zgodnie z ruchem wskazówek zegara
+#define SERVO_CCW     100  // 1.7 ms - obrót przeciwnie do ruchu wskazówek zegara
+#define DEG_PER_SEC   810   // Prędkość obrotu serwa w stopniach na sekundę
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,19 +94,39 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(&huart3, &rx_data, 3);
 }
 
-void setServoPulse(TIM_HandleTypeDef *htim, uint32_t channel, uint16_t ticks) {
-    __HAL_TIM_SET_COMPARE(htim, channel, ticks);
+void HAL_Delay(uint32_t Delay)
+{
+  uint32_t tickstart = HAL_GetTick();
+  uint32_t wait = Delay;
+
+  /* Add a period to guaranty minimum wait */
+  if (wait < HAL_MAX_DELAY)
+  {
+    wait += (uint32_t)(uwTickFreq);
+  }
+
+  while((HAL_GetTick() - tickstart) < wait)
+  {
+  }
 }
 
-void setServoSpeed(TIM_HandleTypeDef *htim, uint32_t channel, float speed) {
-    uint16_t pulse_ticks;
-    if (speed > 0) {
-        pulse_ticks = 74 + (uint16_t)(speed * 24);  // Speed range: 74 to 98
-    } else {
-        pulse_ticks = 74 + (uint16_t)(speed * 25);  // Speed range: 74 to 49
-    }
-    setServoPulse(htim, channel, pulse_ticks);
+void Servo_SetPulse(uint16_t pulse)
+{
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pulse);
 }
+
+void Servo_Rotate(float angle)
+{
+    float time = fabs(angle) / DEG_PER_SEC;
+    uint16_t pulse = (angle > 0) ? SERVO_CW : SERVO_CCW;
+    Servo_SetPulse(pulse);
+    HAL_Delay((uint32_t)(time * 1000));
+    Servo_SetPulse(SERVO_NEUTRAL);
+    HAL_Delay(500);
+}
+
+
+
 /* USER CODE END 0 */
 
 /**
@@ -179,14 +202,19 @@ Error_Handler();
   HAL_UART_Receive_IT(&huart3, &rx_data, 3);
   while (1)
   {
-	  setServoPulse(&htim2, TIM_CHANNEL_1, 74);  // Neutral (stop)
+	  Servo_Rotate(90);
 	  HAL_Delay(2000);
-	  setServoPulse(&htim2, TIM_CHANNEL_1, 49);  // Full speed counterclockwise
+	  Servo_Rotate(-90);
 	  HAL_Delay(2000);
-	  setServoPulse(&htim2, TIM_CHANNEL_1, 74);  // Neutral (stop)
-	  HAL_Delay(2000);
-	  setServoPulse(&htim2, TIM_CHANNEL_1, 98);  // Full speed clockwise
-	  HAL_Delay(2000);
+
+//	  setServoPulse(&htim2, TIM_CHANNEL_1, 74);  // Neutral (stop)
+//	  HAL_Delay(2000);
+//	  setServoPulse(&htim2, TIM_CHANNEL_1, 49);  // Full speed counterclockwise
+//	  HAL_Delay(2000);
+//	  setServoPulse(&htim2, TIM_CHANNEL_1, 74);  // Neutral (stop)
+//	  HAL_Delay(2000);
+//	  setServoPulse(&htim2, TIM_CHANNEL_1, 98);  // Full speed clockwise
+//	  HAL_Delay(2000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

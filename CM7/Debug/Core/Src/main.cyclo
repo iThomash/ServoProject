@@ -1,0 +1,12 @@
+../Core/Src/main.c:69:6:SendDebugMessage	1
+../Core/Src/main.c:73:6:SendDebugInt	1
+../Core/Src/main.c:79:6:SendDebugFloat	1
+../Core/Src/main.c:85:6:HAL_UART_RxCpltCallback	1
+../Core/Src/main.c:94:6:setServoPulse	6
+../Core/Src/main.c:98:6:setServoSpeed	2
+../Core/Src/main.c:113:5:main	7
+../Core/Src/main.c:201:6:SystemClock_Config	4
+../Core/Src/main.c:252:13:MX_TIM2_Init	7
+../Core/Src/main.c:315:13:MX_USART3_UART_Init	5
+../Core/Src/main.c:363:13:MX_GPIO_Init	1
+../Core/Src/main.c:455:6:Error_Handler	1

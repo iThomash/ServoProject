@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
@@ -94,22 +96,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(&huart3, &rx_data, 3);
 }
 
-void Servo_SetPulse(uint16_t pulse)
-{
-    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pulse);
+float ConvertToVoltage(uint32_t adcValue, uint32_t resolution) {
+    return (adcValue * 3.3) / ((1 << resolution) - 1);  // 3.3V dla zasilania, 12-bit ADC
 }
-
-void Servo_Rotate(float angle)
-{
-    float time = fabs(angle) / DEG_PER_SEC;
-    uint16_t pulse = (angle > 0) ? SERVO_CW : SERVO_CCW;
-    Servo_SetPulse(pulse);
-    HAL_Delay((uint32_t)(time * 1000));
-    Servo_SetPulse(SERVO_NEUTRAL);
-    HAL_Delay(500);
-}
-
-
 
 /* USER CODE END 0 */
 
@@ -171,9 +160,11 @@ Error_Handler();
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_TIM2_Init();
   MX_USART3_UART_Init();
   MX_I2C2_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 	disp.addr = (0x27 << 1);
 	disp.bl = true;
@@ -193,8 +184,17 @@ Error_Handler();
   int i = 0;
   while (1)
   {
-	sprintf((char *)disp.f_line, "%d", i);
-	sprintf((char *)disp.s_line, "%d", i);
+
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1,20);
+	uint16_t v = HAL_ADC_GetValue(&hadc1);
+
+	float voltage = 3.3 * v / 65535;
+	float resistance = (( voltage)/(3.3 - voltage) * 4700);
+	float lux = (10 * pow(8000, 1/0.6)) / pow(resistance, 1/0.6);
+
+	sprintf((char *)disp.f_line, "%.2f", lux);
+	sprintf((char *)disp.s_line, "nigger");
 	HAL_Delay(500);
 	lcd_display(&disp);
 	i+=1;
@@ -227,6 +227,10 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+
+  /** Macro to configure the PLL clock source
+  */
+  __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSI);
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.

@@ -96,9 +96,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(&huart3, &rx_data, 3);
 }
 
-float ConvertToVoltage(uint32_t adcValue, uint32_t resolution) {
-    return (adcValue * 3.3) / ((1 << resolution) - 1);  // 3.3V dla zasilania, 12-bit ADC
+void Servo_SetAngle(uint8_t angle) {
+    angle = angle>180 ? 180 : angle;
+    angle = angle<0 ? 0 : angle;
+    uint32_t pulse_length = 500 + (angle * 2000 / 180);
+	uint32_t ccr_value = (pulse_length * (htim2.Init.Period + 1)) / 20000;
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, ccr_value);
 }
+
 
 /* USER CODE END 0 */
 
@@ -169,19 +174,14 @@ Error_Handler();
 	disp.addr = (0x27 << 1);
 	disp.bl = true;
 	lcd_init(&disp);
-	sprintf((char *)disp.f_line, "n");
-	sprintf((char *)disp.s_line, "n");
-	lcd_display(&disp);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  TIM2->CCR1 = 50;
-  TIM2->CCR2 = 50;
+  TIM2->CCR1 = 100;
   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
   HAL_UART_Receive_IT(&huart3, &rx_data, 3);
-  int i = 0;
+
   while (1)
   {
 
@@ -194,14 +194,12 @@ Error_Handler();
 	float lux = (10 * pow(8000, 1/0.6)) / pow(resistance, 1/0.6);
 
 	sprintf((char *)disp.f_line, "%.2f", lux);
-	sprintf((char *)disp.s_line, "nigger");
-	HAL_Delay(500);
+	sprintf((char *)disp.s_line, "uwu");
 	lcd_display(&disp);
-	i+=1;
-//	  Servo_Rotate(90);
-//	  HAL_Delay(2000);
-//	  Servo_Rotate(-90);
-//	  HAL_Delay(2000);
+
+	float angle = lux<10 ? lux * 3 : (lux<40 ? fmax(lux * 1.5, 10) : (lux <=150 ? fmax(lux,40) : 180));
+	Servo_SetAngle(angle);
+	HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
